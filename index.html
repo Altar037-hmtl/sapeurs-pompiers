@@ -359,6 +359,8 @@ dialog::backdrop{background:rgba(15,8,8,.62)}
 .frmap .ibox{fill:none;stroke:var(--line);stroke-dasharray:3 3}
 .frmap.byreg path:not(.bspp):not(.bmpm){fill:var(--rc)}
 .frmap.byreg path.rh,.frmap.byreg path.rsel{fill:var(--red)}
+.dl{font:inherit;font-weight:700;padding:8px 14px;border-radius:8px;border:2px solid var(--btn);background:none;color:var(--btn);cursor:pointer;margin-top:4px}
+.dl:hover,.dl:focus-visible{background:var(--btn);color:var(--on-btn);outline:none}
 .legend button.lg{display:inline-flex;align-items:center;gap:7px;background:none;border:1px solid transparent;border-radius:8px;padding:3px 7px;margin:-3px -4px;font:inherit;color:inherit;cursor:pointer;text-align:left}
 .legend button.lg:hover,.legend button.lg:focus-visible{border-color:var(--line);outline:none}
 .legend button.lg[aria-pressed="false"]{opacity:.45;text-decoration:line-through}
@@ -868,7 +870,7 @@ input,textarea,select,[contenteditable],.mmbody,.mmbody img{-webkit-user-select:
 <p class="lead">Clique sur un département, ou cherche-le par son nom ou son numéro, pour voir qui assure les secours et trouver la fiche officielle de son service d’incendie et de secours.</p>
 <div class="search"><label for="cQ">Trouver un département</label>
 <div class="sbox"><svg aria-hidden="true" viewBox="0 0 24 24" width="20" height="20"><circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" stroke-width="2.4"/><path d="M16.5 16.5L21 21" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>
-<input id="cQ" type="search" placeholder="Nom ou numéro : Gironde, 33…" autocomplete="off" role="combobox" aria-expanded="false" aria-controls="cRes" aria-autocomplete="list">
+<input id="cQ" type="search" placeholder="Nom ou numéro : Gironde, 33, Bretagne…" autocomplete="off" role="combobox" aria-expanded="false" aria-controls="cRes" aria-autocomplete="list">
 <button type="button" id="cClear" aria-label="Effacer la recherche" hidden>×</button></div>
 <ul class="cres" id="cRes" role="listbox" hidden></ul>
 <p class="scount" id="cInfo" aria-live="polite"></p></div>
@@ -876,6 +878,7 @@ input,textarea,select,[contenteditable],.mmbody,.mmbody img{-webkit-user-select:
 <p class="scount" id="regHint" hidden>Chaque couleur est une région. Survole-la ou clique dessus pour voir les brigades qui la couvrent.</p>
 <div class="legend" role="group" aria-label="Afficher ou masquer une catégorie sur la carte"><button type="button" class="lg" data-k="sdis" aria-pressed="true"><i style="background:var(--dep)"></i>Service départemental d’incendie et de secours</button><button type="button" class="lg" data-k="bspp" aria-pressed="true"><i style="background:var(--char2)"></i>Brigade de sapeurs-pompiers de Paris</button><button type="button" class="lg" data-k="bmpm" aria-pressed="true"><i style="background:var(--hv)"></i>Bouches-du-Rhône : BMPM à Marseille et SDIS 13</button></div>
 <div class="frmap" id="frmap"></div>
+<p><button type="button" class="dl" id="savePng">Télécharger la carte en image (PNG)</button></p>
 <p class="foot">Contours des départements simplifiés, issus des données publiques du découpage administratif. Liens vers l’Annuaire de l’administration (Service-Public).</p>
 <h3 class="regtitle">Les régions</h3>
 <div class="regs" id="regs"></div>
@@ -1853,13 +1856,29 @@ var cQ=document.getElementById('cQ'),cRes=document.getElementById('cRes'),cInfo=
 function drawRes(){
  cRes.innerHTML='';
  hits.forEach(function(c,i){var li=el('li');li.setAttribute('role','option');li.id='cr'+i;li.setAttribute('aria-selected',i===hsel);
-  li.appendChild(el('span',null,DEPN[c][0]+' ('+c+')'));li.appendChild(el('small',null,DEPN[c][2]));
+  li.appendChild(el('span',null,labelOf(c)));li.appendChild(el('small',null,c.indexOf('R:')===0?'Région':DEPN[c][2]));
   li.onmousedown=function(e){e.preventDefault();pickDep(c)};cRes.appendChild(li)});
  var open=hits.length>0;cRes.hidden=!open;cQ.setAttribute('aria-expanded',open);
  if(hsel>-1)cQ.setAttribute('aria-activedescendant','cr'+hsel);else cQ.removeAttribute('aria-activedescendant');
 }
-function pickDep(c){cRes.hidden=true;cQ.setAttribute('aria-expanded','false');cQ.value=DEPN[c][0];cClr.hidden=false;cInfo.textContent='';openDep(c)}
-cQ.addEventListener('input',function(){var v=cQ.value.trim();hits=depSearch(v);hsel=hits.length?0:-1;drawRes();cClr.hidden=!cQ.value;cInfo.textContent=v&&!hits.length?'Aucun département ne correspond à « '+v+' ».':''});
+function pickDep(c){cRes.hidden=true;cQ.setAttribute('aria-expanded','false');cClr.hidden=false;cInfo.textContent='';
+ if(c.indexOf('R:')===0){var rg=c.slice(2);cQ.value=rg;setMode(true);openRegion(rg);return}
+ cQ.value=DEPN[c][0];openDep(c)}
+function regSearch(q){var n=nrm(q);if(!n)return[];return REGNAMES.filter(function(r){return nrm(r).indexOf(n)>-1}).map(function(r){return 'R:'+r})}
+function labelOf(c){return c.indexOf('R:')===0?c.slice(2)+' (région)':DEPN[c][0]+' ('+c+')'}
+cQ.addEventListener('input',function(){var v=cQ.value.trim();hits=regSearch(v).concat(depSearch(v)).slice(0,10);hsel=hits.length?0:-1;drawRes();cClr.hidden=!cQ.value;cInfo.textContent=v&&!hits.length?'Aucun département ni région ne correspond à « '+v+' ».':''});
+function savePng(){
+ var svg=document.querySelector('#frmap svg');if(!svg)return;
+ var c=svg.cloneNode(true);var src=svg.querySelectorAll('path,rect,text'),dst=c.querySelectorAll('path,rect,text');
+ for(var i=0;i<src.length;i++){var cs=getComputedStyle(src[i]);dst[i].setAttribute('style','fill:'+cs.fill+';fill-opacity:'+cs.fillOpacity+';stroke:'+cs.stroke+';stroke-width:'+cs.strokeWidth+';stroke-dasharray:'+cs.strokeDasharray+';font-family:'+cs.fontFamily+';font-size:'+cs.fontSize+';font-weight:'+cs.fontWeight)}
+ c.setAttribute('xmlns',SVGNS);c.setAttribute('width',1240);c.setAttribute('height',1010);
+ var bg=getComputedStyle(document.getElementById('frmap')).backgroundColor;
+ var url=URL.createObjectURL(new Blob([new XMLSerializer().serializeToString(c)],{type:'image/svg+xml;charset=utf-8'}));
+ var im=new Image();im.onload=function(){var cv=document.createElement('canvas');cv.width=2480;cv.height=2020;var x=cv.getContext('2d');
+  x.fillStyle=bg&&bg!=='rgba(0, 0, 0, 0)'?bg:'#ffffff';x.fillRect(0,0,cv.width,cv.height);x.drawImage(im,0,0,cv.width,cv.height);
+  URL.revokeObjectURL(url);var a=document.createElement('a');a.download='carte-sapeurs-pompiers.png';a.href=cv.toDataURL('image/png');document.body.appendChild(a);a.click();a.remove()};
+ im.src=url}
+document.getElementById('savePng').onclick=savePng;
 cQ.addEventListener('keydown',function(e){
  if(e.key==='ArrowDown'&&hits.length){e.preventDefault();hsel=(hsel+1)%hits.length;drawRes()}
  else if(e.key==='ArrowUp'&&hits.length){e.preventDefault();hsel=(hsel-1+hits.length)%hits.length;drawRes()}
