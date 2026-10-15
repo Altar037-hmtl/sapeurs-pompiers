@@ -359,6 +359,12 @@ dialog::backdrop{background:rgba(15,8,8,.62)}
 .frmap .ibox{fill:none;stroke:var(--line);stroke-dasharray:3 3}
 .frmap.byreg path:not(.bspp):not(.bmpm){fill:var(--rc)}
 .frmap.byreg path.rh,.frmap.byreg path.rsel{fill:var(--red)}
+.legend button.lg{display:inline-flex;align-items:center;gap:7px;background:none;border:1px solid transparent;border-radius:8px;padding:3px 7px;margin:-3px -4px;font:inherit;color:inherit;cursor:pointer;text-align:left}
+.legend button.lg:hover,.legend button.lg:focus-visible{border-color:var(--line);outline:none}
+.legend button.lg[aria-pressed="false"]{opacity:.45;text-decoration:line-through}
+.frmap.no-sdis path:not(.bspp):not(.bmpm){fill:var(--card)!important}
+.frmap.no-bspp path.bspp{fill:var(--card)!important}
+.frmap.no-bmpm path.bmpm{fill:var(--card)!important}
 .vtog{display:inline-flex;border:1px solid var(--line);border-radius:999px;padding:3px;margin:12px 0 0;background:var(--card)}
 .vtog button{border:0;background:none;color:var(--ink);font:inherit;font-weight:700;padding:7px 14px;border-radius:999px;cursor:pointer}
 .vtog button.on,.vtog button[aria-pressed="true"]{background:var(--btn);color:var(--on-btn)}
@@ -868,7 +874,7 @@ input,textarea,select,[contenteditable],.mmbody,.mmbody img{-webkit-user-select:
 <p class="scount" id="cInfo" aria-live="polite"></p></div>
 <div class="vtog" role="group" aria-label="Mode d’affichage de la carte"><button type="button" id="vDep" class="on" aria-pressed="true">Par département</button><button type="button" id="vReg" aria-pressed="false">Par région</button></div>
 <p class="scount" id="regHint" hidden>Chaque couleur est une région. Survole-la ou clique dessus pour voir les brigades qui la couvrent.</p>
-<div class="legend"><span><i style="background:var(--dep)"></i>Service départemental d’incendie et de secours</span><span><i style="background:var(--char2)"></i>Brigade de sapeurs-pompiers de Paris</span><span><i style="background:var(--hv)"></i>Bouches-du-Rhône : BMPM à Marseille et SDIS 13</span></div>
+<div class="legend" role="group" aria-label="Afficher ou masquer une catégorie sur la carte"><button type="button" class="lg" data-k="sdis" aria-pressed="true"><i style="background:var(--dep)"></i>Service départemental d’incendie et de secours</button><button type="button" class="lg" data-k="bspp" aria-pressed="true"><i style="background:var(--char2)"></i>Brigade de sapeurs-pompiers de Paris</button><button type="button" class="lg" data-k="bmpm" aria-pressed="true"><i style="background:var(--hv)"></i>Bouches-du-Rhône : BMPM à Marseille et SDIS 13</button></div>
 <div class="frmap" id="frmap"></div>
 <p class="foot">Contours des départements simplifiés, issus des données publiques du découpage administratif. Liens vers l’Annuaire de l’administration (Service-Public).</p>
 <h3 class="regtitle">Les régions</h3>
@@ -1837,6 +1843,7 @@ function setMode(reg){
  document.getElementById('regHint').hidden=!reg;
  if(!reg){REGNAMES.forEach(function(r){setRegHl(r,'rsel',false);setRegHl(r,'rh',false)});document.getElementById('regFiche').hidden=true}
 }
+document.querySelectorAll('.legend button.lg').forEach(function(b){b.onclick=function(){var on=b.getAttribute('aria-pressed')!=='true';b.setAttribute('aria-pressed',String(on));document.getElementById('frmap').classList.toggle('no-'+b.getAttribute('data-k'),!on)}});
 document.getElementById('vDep').onclick=function(){setMode(false)};
 document.getElementById('vReg').onclick=function(){setMode(true)};
 function depSearch(q){var n=nrm(q);if(!n)return[];var codes=Object.keys(DEPN);
