@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+<channel>
+<title>Les Sapeurs-Pompiers : nouveautés</title>
+<link>https://altar037-hmtl.github.io/sapeurs-pompiers/</link>
+<description>Les dernières modifications du site de révision sur les sapeurs-pompiers.</description>
+<language>fr-FR</language>
+<item>
+<title>Mise à jour du 15 octobre 2026 (suite)</title>
+<link>https://altar037-hmtl.github.io/sapeurs-pompiers/#nouveautes</link>
+<guid isPermaLink="false">15 octobre 2026 (suite)</guid>
+<pubDate>Thu, 15 Oct 2026 12:00:00 +0200</pubDate>
+<description>Question du jour, export des cartes mémoire en CSV, impression, pages par sujet, hors ligne et lien vers le site de la police municipale.</description>
+</item>
+<item>
+<title>Mise à jour du 15 octobre 2026</title>
+<link>https://altar037-hmtl.github.io/sapeurs-pompiers/#nouveautes</link>
+<guid isPermaLink="false">15 octobre 2026</guid>
+<pubDate>Thu, 15 Oct 2026 08:00:00 +0200</pubDate>
+<description>Carte des SDIS par région, quiz « Où est ce département ? » avec minuteur, téléchargement de la carte, centres de la BSPP, du Tarn et du pôle de Gignac.</description>
+</item>
+<item>
+<title>Mise à jour du 14 octobre 2026</title>
+<link>https://altar037-hmtl.github.io/sapeurs-pompiers/#nouveautes</link>
+<guid isPermaLink="false">14 octobre 2026</guid>
+<pubDate>Wed, 14 Oct 2026 08:00:00 +0200</pubDate>
+<description>Mise en ligne du site : spécialités SPV, SPP et JSP, engins, tenues, grades, quiz, examen blanc et carte des SDIS.</description>
+</item>
+</channel>
+</rss>
