@@ -888,13 +888,20 @@ input,textarea,select,[contenteditable],.mmbody,.mmbody img{-webkit-user-select:
 <div class="vtog" role="group" aria-label="Mode d’affichage de la carte"><button type="button" id="vDep" class="on" aria-pressed="true">Par département</button><button type="button" id="vReg" aria-pressed="false">Par région</button></div>
 <p class="scount" id="regHint" hidden>Chaque couleur est une région. Survole-la ou clique dessus pour voir les brigades qui la couvrent.</p>
 <div class="legend" role="group" aria-label="Afficher ou masquer une catégorie sur la carte"><button type="button" class="lg" data-k="sdis" aria-pressed="true"><i style="background:var(--dep)"></i>Service départemental d’incendie et de secours</button><button type="button" class="lg" data-k="bspp" aria-pressed="true"><i style="background:var(--char2)"></i>Brigade de sapeurs-pompiers de Paris</button><button type="button" class="lg" data-k="bmpm" aria-pressed="true"><i style="background:var(--hv)"></i>Bouches-du-Rhône : BMPM à Marseille et SDIS 13</button></div>
-<div class="qbox" id="qBox" hidden aria-live="polite"></div>
-<div class="frmap" id="frmap"></div>
-<p><button type="button" class="dl" id="savePng">Télécharger la carte en image (PNG)</button> <button type="button" class="dl" id="qStart">Quiz : où est ce département ?</button> <label class="qlab">Temps par question <select id="qTime"><option value="10">10 s</option><option value="15" selected>15 s</option></select></label></p>
+<div id="mapHome"><div class="qbox" id="qBox" hidden aria-live="polite"></div>
+<div class="frmap" id="frmap"></div></div>
+<p><button type="button" class="dl" id="savePng">Télécharger la carte en image (PNG)</button></p>
 <p class="foot">Contours des départements simplifiés, issus des données publiques du découpage administratif. Liens vers l’Annuaire de l’administration (Service-Public).</p>
 <h3 class="regtitle">Les régions</h3>
 <div class="regs" id="regs"></div>
 <div id="regFiche" class="regfiche" hidden></div>
+</section>
+
+<section id="quizcarte" class="wrap page" hidden>
+<h2>Quiz : où est ce département ?</h2>
+<p class="lead">Clique sur le département demandé, dans la carte. Tu as un temps limité pour chaque question : 10 questions par manche.</p>
+<p><button type="button" class="dl" id="qStart">Lancer le quiz</button> <label class="qlab">Temps par question <select id="qTime"><option value="10">10 s</option><option value="15" selected>15 s</option></select></label></p>
+<div id="mapQuiz"></div>
 </section>
 
 <section id="sdis" class="wrap page" hidden>
@@ -1006,6 +1013,7 @@ input,textarea,select,[contenteditable],.mmbody,.mmbody img{-webkit-user-select:
 <p class="lead">Teste ce que tu as appris, puis prépare le recrutement.</p>
 <div class="tiles">
 <a class="tile" href="#quiz" data-go="quiz"><b>Quiz et examen blanc <span aria-hidden="true">→</span></b><small>Questions par niveau, cas pratiques, examen sur 20.</small></a>
+<a class="tile" href="#quizcarte" data-go="quizcarte"><b>Quiz de la carte <span aria-hidden="true">→</span></b><small>Trouve où se trouve chaque département, avec un minuteur.</small></a>
 <a class="tile" href="#memo" data-go="memo"><b>Cartes mémoire et oral <span aria-hidden="true">→</span></b><small>Un texte au recto, la réponse au verso, et la phrase d’oral.</small></a>
 <a class="tile" href="#puisje" data-go="puisje"><b>Est-ce que je peux… ? <span aria-hidden="true">→</span></b><small>Une situation, une réponse claire et l’article qui va avec.</small></a>
 <a class="tile" href="#transmissions" data-go="transmissions"><b>Transmissions et bilans <span aria-hidden="true">→</span></b><small>Messages radio, bilan de secourisme, alphabet radio.</small></a>
@@ -1888,6 +1896,7 @@ function qAnswer(c){qFinish(c)}
 function qNext(){QZ.i++;QZ.locked=false;qClear();qRender()}
 function qQuit(){QZ=null;clearInterval(QT);qClear();qHide(false);var box=document.getElementById('qBox');box.innerHTML='';box.hidden=true}
 document.getElementById('qStart').onclick=qStart;
+function placeMap(where){var dst=document.getElementById(where==='quiz'?'mapQuiz':'mapHome');['qBox','frmap'].forEach(function(i){var n=document.getElementById(i);if(n&&n.parentNode!==dst)dst.appendChild(n)})}
 function svcLabel(c){var s=DSPEC[c];if(s){return s[0]==='bspp'?'BSPP':s[0]==='bmpm'?'BMPM + SDIS':'SDMIS'}return(c==='2A'||c==='2B')?'SIS':'SDIS'}
 function nDeps(n){return n+(n>1?' départements':' département')}
 function buildRegs(){
@@ -2028,7 +2037,7 @@ var NAVS=document.querySelectorAll('main > section'),mBtn=document.getElementByI
 function setMenu(o){mPanel.hidden=!o;mBtn.setAttribute('aria-expanded',o?'true':'false');mBtn.setAttribute('aria-label',o?'Fermer le menu':'Ouvrir le menu')}
 var GROUPS={
  'g-apprendre':{n:'Apprendre',p:[['spv','Être SPV'],['spp','Être SPP'],['comparatif','SPV ou SPP ?'],['jsp','Les JSP'],['biblio','Textes de lois'],['articles','Articles essentiels'],['fiches','Fiches mémo'],['mindmaps','Cartes mentales'],['organisation','Organisation'],['acteurs','Qui fait quoi ?'],['grades','Grades'],['engins','Engins'],['tenues','Tenues'],['glossaire','Glossaire'],['frise','Frise']]},
- 'g-entrainer':{n:'S’entraîner',p:[['quiz','Quiz et examen'],['memo','Cartes mémoire'],['puisje','Est-ce que je peux… ?'],['transmissions','Transmissions'],['concours','Concours'],['sport','Sport']]},
+ 'g-entrainer':{n:'S’entraîner',p:[['quiz','Quiz et examen'],['quizcarte','Quiz de la carte'],['memo','Cartes mémoire'],['puisje','Est-ce que je peux… ?'],['transmissions','Transmissions'],['concours','Concours'],['sport','Sport']]},
  'g-explorer':{n:'Explorer',p:[['carte','Carte des SDIS'],['tableau','Chiffres clés'],['numeros','Numéros utiles']]},
  'g-outils':{n:'Mes outils',p:[['favoris','Mes favoris'],['notes','Bloc-notes'],['carnet','Mon carnet'],['recherche','Rechercher']]}
 };
@@ -2039,7 +2048,7 @@ function go(id){
  if(!s||s.parentNode.nodeName!=='MAIN')id='accueil';
  if(curId==='quiz'&&id!=='quiz')menu();
  if(id==='sdis'&&!document.getElementById('sdisFiche').firstChild)id='carte';
- if(id==='notes')drawNotes();if(id==='favoris')renderFav();if(id==='carnet')drawCarnet();if(id==='carte')drawMap();if(id==='mindmaps')renderMaps();
+ if(id==='notes')drawNotes();if(id==='favoris')renderFav();if(id==='carnet')drawCarnet();if(id==='carte'||id==='quizcarte')drawMap();if(id==='mindmaps')renderMaps();if(curId==='quizcarte'&&id!=='quizcarte')qQuit();if(id==='carte'||id==='quizcarte')placeMap(id==='quizcarte'?'quiz':'home');
  curId=id;
  NAVS.forEach(function(x){x.hidden=x.id!==id});
  var mt=GROUP_OF[id]||id;setTimeout(function(){showSubnavCur(id)},0);
