@@ -359,6 +359,13 @@ dialog::backdrop{background:rgba(15,8,8,.62)}
 .frmap .ibox{fill:none;stroke:var(--line);stroke-dasharray:3 3}
 .frmap.byreg path:not(.bspp):not(.bmpm){fill:var(--rc)}
 .frmap.byreg path.rh,.frmap.byreg path.rsel{fill:var(--red)}
+.qbox{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin:10px 0}
+.qbox h3{margin:4px 0 6px;font-size:1.2rem}
+.qbox p{margin:4px 0}
+.qbox .qmsg{min-height:1.4em;color:var(--mute)}
+.qbox .qact{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+.frmap path.qok{fill:var(--ok)!important}
+.frmap path.qko{fill:var(--ko)!important}
 .dl{font:inherit;font-weight:700;padding:8px 14px;border-radius:8px;border:2px solid var(--btn);background:none;color:var(--btn);cursor:pointer;margin-top:4px}
 .dl:hover,.dl:focus-visible{background:var(--btn);color:var(--on-btn);outline:none}
 .legend button.lg{display:inline-flex;align-items:center;gap:7px;background:none;border:1px solid transparent;border-radius:8px;padding:3px 7px;margin:-3px -4px;font:inherit;color:inherit;cursor:pointer;text-align:left}
@@ -877,8 +884,9 @@ input,textarea,select,[contenteditable],.mmbody,.mmbody img{-webkit-user-select:
 <div class="vtog" role="group" aria-label="Mode d’affichage de la carte"><button type="button" id="vDep" class="on" aria-pressed="true">Par département</button><button type="button" id="vReg" aria-pressed="false">Par région</button></div>
 <p class="scount" id="regHint" hidden>Chaque couleur est une région. Survole-la ou clique dessus pour voir les brigades qui la couvrent.</p>
 <div class="legend" role="group" aria-label="Afficher ou masquer une catégorie sur la carte"><button type="button" class="lg" data-k="sdis" aria-pressed="true"><i style="background:var(--dep)"></i>Service départemental d’incendie et de secours</button><button type="button" class="lg" data-k="bspp" aria-pressed="true"><i style="background:var(--char2)"></i>Brigade de sapeurs-pompiers de Paris</button><button type="button" class="lg" data-k="bmpm" aria-pressed="true"><i style="background:var(--hv)"></i>Bouches-du-Rhône : BMPM à Marseille et SDIS 13</button></div>
+<div class="qbox" id="qBox" hidden aria-live="polite"></div>
 <div class="frmap" id="frmap"></div>
-<p><button type="button" class="dl" id="savePng">Télécharger la carte en image (PNG)</button></p>
+<p><button type="button" class="dl" id="savePng">Télécharger la carte en image (PNG)</button> <button type="button" class="dl" id="qStart">Quiz : où est ce département ?</button></p>
 <p class="foot">Contours des départements simplifiés, issus des données publiques du découpage administratif. Liens vers l’Annuaire de l’administration (Service-Public).</p>
 <h3 class="regtitle">Les régions</h3>
 <div class="regs" id="regs"></div>
@@ -1819,7 +1827,43 @@ REGNAMES.sort(function(a,b){return a.localeCompare(b,'fr')});
 function isReg(){var b=document.getElementById('frmap');return !!b&&b.classList.contains('byreg')}
 function regDepts(rg){return Object.keys(DEPN).filter(function(c){return DEPN[c][2]===rg}).sort()}
 function setRegHl(rg,cls,on){regDepts(rg).forEach(function(c){(depPaths[c]||[]).forEach(function(p){p.classList.toggle(cls,on)})})}
-function act(c){if(isReg())openRegion(DEPN[c][2]);else openDep(c)}
+function act(c){if(QZ&&!QZ.done){qAnswer(c);return}if(isReg())openRegion(DEPN[c][2]);else openDep(c)}
+/* ---------- Quiz : où est ce département ? ---------- */
+var QZ=null;
+function qBtn(label,fn){var b=el('button','dl',label);b.type='button';b.onclick=fn;return b}
+function qClear(){document.querySelectorAll('#frmap path.qok,#frmap path.qko').forEach(function(p){p.classList.remove('qok','qko')})}
+function qMark(c,cls){(depPaths[c]||[]).forEach(function(p){p.classList.add(cls)})}
+function qRender(){
+ var box=document.getElementById('qBox');box.innerHTML='';box.hidden=false;
+ if(QZ.i>=QZ.list.length){
+  QZ.done=true;
+  box.appendChild(el('h3',null,'Résultat : '+QZ.score+' sur '+QZ.list.length));
+  box.appendChild(el('p',null,QZ.score>=8?'Excellent, tu connais bien la carte !':QZ.score>=5?'Bien joué, encore quelques tours et ce sera parfait.':'Continue : la carte se retient à force de la regarder.'));
+  var a=el('div','qact');a.appendChild(qBtn('Nouveau quiz',qStart));a.appendChild(qBtn('Quitter',qQuit));box.appendChild(a);return}
+ var c=QZ.list[QZ.i];
+ box.appendChild(el('p',null,'Question '+(QZ.i+1)+' sur '+QZ.list.length+' · Score : '+QZ.score));
+ box.appendChild(el('h3',null,'Clique sur : '+DEPN[c][0]+' ('+c+')'));
+ box.appendChild(el('p','qmsg','Clique sur le département dans la carte, ou atteins-le avec la touche Tab puis Entrée.'));
+ var a=el('div','qact');a.appendChild(qBtn('Quitter',qQuit));box.appendChild(a);
+}
+function qStart(){
+ var all=Object.keys(DEPN);for(var i=all.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1));var t=all[i];all[i]=all[j];all[j]=t}
+ QZ={list:all.slice(0,10),i:0,score:0,locked:false,done:false};
+ qClear();qRender();
+}
+function qAnswer(c){
+ if(!QZ||QZ.done||QZ.locked)return;QZ.locked=true;
+ var t=QZ.list[QZ.i],msg;
+ if(c===t){QZ.score++;qMark(t,'qok');msg='Bravo, c’est bien '+DEPN[t][0]+' !'}
+ else{qMark(c,'qko');qMark(t,'qok');msg='Raté : c’était '+DEPN[t][0]+' ('+t+'). Tu as cliqué sur '+DEPN[c][0]+'.'}
+ var box=document.getElementById('qBox');
+ box.querySelector('.qmsg').textContent=msg;
+ box.querySelector('p').textContent='Question '+(QZ.i+1)+' sur '+QZ.list.length+' · Score : '+QZ.score;
+ var a=box.querySelector('.qact');a.insertBefore(qBtn(QZ.i+1<QZ.list.length?'Question suivante':'Voir le résultat',qNext),a.firstChild);
+}
+function qNext(){QZ.i++;QZ.locked=false;qClear();qRender()}
+function qQuit(){QZ=null;qClear();var box=document.getElementById('qBox');box.innerHTML='';box.hidden=true}
+document.getElementById('qStart').onclick=qStart;
 function svcLabel(c){var s=DSPEC[c];if(s){return s[0]==='bspp'?'BSPP':s[0]==='bmpm'?'BMPM + SDIS':'SDMIS'}return(c==='2A'||c==='2B')?'SIS':'SDIS'}
 function nDeps(n){return n+(n>1?' départements':' département')}
 function buildRegs(){
