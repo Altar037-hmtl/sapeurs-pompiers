@@ -366,6 +366,10 @@ dialog::backdrop{background:rgba(15,8,8,.62)}
 .qbox .qact{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
 .frmap path.qok{fill:var(--ok)!important}
 .frmap path.qko{fill:var(--ko)!important}
+.frmap.quiz text{display:none}
+.qlab{font-size:.95rem;color:var(--mute);margin-left:4px}
+.qlab select{font:inherit;padding:6px 8px;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--ink)}
+.qbox .qtime{font-weight:700}
 .dl{font:inherit;font-weight:700;padding:8px 14px;border-radius:8px;border:2px solid var(--btn);background:none;color:var(--btn);cursor:pointer;margin-top:4px}
 .dl:hover,.dl:focus-visible{background:var(--btn);color:var(--on-btn);outline:none}
 .legend button.lg{display:inline-flex;align-items:center;gap:7px;background:none;border:1px solid transparent;border-radius:8px;padding:3px 7px;margin:-3px -4px;font:inherit;color:inherit;cursor:pointer;text-align:left}
@@ -886,7 +890,7 @@ input,textarea,select,[contenteditable],.mmbody,.mmbody img{-webkit-user-select:
 <div class="legend" role="group" aria-label="Afficher ou masquer une catégorie sur la carte"><button type="button" class="lg" data-k="sdis" aria-pressed="true"><i style="background:var(--dep)"></i>Service départemental d’incendie et de secours</button><button type="button" class="lg" data-k="bspp" aria-pressed="true"><i style="background:var(--char2)"></i>Brigade de sapeurs-pompiers de Paris</button><button type="button" class="lg" data-k="bmpm" aria-pressed="true"><i style="background:var(--hv)"></i>Bouches-du-Rhône : BMPM à Marseille et SDIS 13</button></div>
 <div class="qbox" id="qBox" hidden aria-live="polite"></div>
 <div class="frmap" id="frmap"></div>
-<p><button type="button" class="dl" id="savePng">Télécharger la carte en image (PNG)</button> <button type="button" class="dl" id="qStart">Quiz : où est ce département ?</button></p>
+<p><button type="button" class="dl" id="savePng">Télécharger la carte en image (PNG)</button> <button type="button" class="dl" id="qStart">Quiz : où est ce département ?</button> <label class="qlab">Temps par question <select id="qTime"><option value="10">10 s</option><option value="15" selected>15 s</option></select></label></p>
 <p class="foot">Contours des départements simplifiés, issus des données publiques du découpage administratif. Liens vers l’Annuaire de l’administration (Service-Public).</p>
 <h3 class="regtitle">Les régions</h3>
 <div class="regs" id="regs"></div>
@@ -1811,7 +1815,7 @@ function drawMap(){
   var t=svgEl('title',{});t.textContent=DEPN[c][0]+' ('+c+')';p.appendChild(t);
   var rg=DEPN[c][2];p.setAttribute('data-reg',rg);p.style.setProperty('--rc','hsl('+Math.round((REGNAMES.indexOf(rg)*137.508)%360)+' 55% 76%)');
   p.addEventListener('click',function(){act(c)});p.addEventListener('keydown',function(e){if(e.key==='Enter'||e.key===' '){e.preventDefault();act(c)}});
-  p.addEventListener('mouseenter',function(){if(isReg())setRegHl(rg,'rh',true)});p.addEventListener('mouseleave',function(){setRegHl(rg,'rh',false)});
+  p.addEventListener('mouseenter',function(){if(isReg()&&(!QZ||QZ.done))setRegHl(rg,'rh',true)});p.addEventListener('mouseleave',function(){setRegHl(rg,'rh',false)});
   (depPaths[c]=depPaths[c]||[]).push(p);svg.appendChild(p)}
  Object.keys(MAPD.p).forEach(function(c){add(c,MAPD.p[c])});
  var ib=MAPD.ib;svg.appendChild(svgEl('rect',{x:ib[0]-6,y:ib[1]-6,width:ib[2]+12,height:ib[3]+12,rx:8,class:'ibox'}));
@@ -1829,40 +1833,60 @@ function regDepts(rg){return Object.keys(DEPN).filter(function(c){return DEPN[c]
 function setRegHl(rg,cls,on){regDepts(rg).forEach(function(c){(depPaths[c]||[]).forEach(function(p){p.classList.toggle(cls,on)})})}
 function act(c){if(QZ&&!QZ.done){qAnswer(c);return}if(isReg())openRegion(DEPN[c][2]);else openDep(c)}
 /* ---------- Quiz : où est ce département ? ---------- */
-var QZ=null;
+var QZ=null,QT=null;
 function qBtn(label,fn){var b=el('button','dl',label);b.type='button';b.onclick=fn;return b}
 function qClear(){document.querySelectorAll('#frmap path.qok,#frmap path.qko').forEach(function(p){p.classList.remove('qok','qko')})}
 function qMark(c,cls){(depPaths[c]||[]).forEach(function(p){p.classList.add(cls)})}
+function qHide(on){
+ document.getElementById('frmap').classList.toggle('quiz',on);
+ Object.keys(depPaths).forEach(function(c){depPaths[c].forEach(function(p){
+  var t=p.querySelector('title');
+  if(on){if(t)t.textContent='';p.setAttribute('aria-label','Département à trouver')}
+  else{if(t)t.textContent=DEPN[c][0]+' ('+c+')';p.setAttribute('aria-label',DEPN[c][0]+' ('+c+')')}
+ })});
+}
+function qTick(){
+ if(!QZ||QZ.locked||QZ.done)return;
+ var left=Math.max(0,Math.ceil((QZ.deadline-Date.now())/1000));
+ var tm=document.getElementById('qTimer');if(tm)tm.textContent='Temps restant : '+left+' s';
+ if(left<=0)qFinish(null);
+}
 function qRender(){
  var box=document.getElementById('qBox');box.innerHTML='';box.hidden=false;
  if(QZ.i>=QZ.list.length){
-  QZ.done=true;
+  QZ.done=true;clearInterval(QT);qHide(false);
   box.appendChild(el('h3',null,'Résultat : '+QZ.score+' sur '+QZ.list.length));
   box.appendChild(el('p',null,QZ.score>=8?'Excellent, tu connais bien la carte !':QZ.score>=5?'Bien joué, encore quelques tours et ce sera parfait.':'Continue : la carte se retient à force de la regarder.'));
   var a=el('div','qact');a.appendChild(qBtn('Nouveau quiz',qStart));a.appendChild(qBtn('Quitter',qQuit));box.appendChild(a);return}
  var c=QZ.list[QZ.i];
+ QZ.deadline=Date.now()+QZ.secs*1000;
  box.appendChild(el('p',null,'Question '+(QZ.i+1)+' sur '+QZ.list.length+' · Score : '+QZ.score));
  box.appendChild(el('h3',null,'Clique sur : '+DEPN[c][0]+' ('+c+')'));
+ var tm=el('p','qtime','Temps restant : '+QZ.secs+' s');tm.id='qTimer';box.appendChild(tm);
  box.appendChild(el('p','qmsg','Clique sur le département dans la carte, ou atteins-le avec la touche Tab puis Entrée.'));
  var a=el('div','qact');a.appendChild(qBtn('Quitter',qQuit));box.appendChild(a);
 }
 function qStart(){
+ var sel=document.getElementById('qTime');var secs=sel?parseInt(sel.value,10):15;if(!secs)secs=15;
  var all=Object.keys(DEPN);for(var i=all.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1));var t=all[i];all[i]=all[j];all[j]=t}
- QZ={list:all.slice(0,10),i:0,score:0,locked:false,done:false};
- qClear();qRender();
+ QZ={list:all.slice(0,10),i:0,score:0,locked:false,done:false,secs:secs};
+ qClear();qHide(true);clearInterval(QT);QT=setInterval(qTick,250);qRender();
 }
-function qAnswer(c){
+function qFinish(c){
  if(!QZ||QZ.done||QZ.locked)return;QZ.locked=true;
  var t=QZ.list[QZ.i],msg;
- if(c===t){QZ.score++;qMark(t,'qok');msg='Bravo, c’est bien '+DEPN[t][0]+' !'}
+ if(c===null){qMark(t,'qok');msg='Temps écoulé ! C’était '+DEPN[t][0]+' ('+t+').'}
+ else if(c===t){QZ.score++;qMark(t,'qok');msg='Bravo, c’est bien '+DEPN[t][0]+' !'}
  else{qMark(c,'qko');qMark(t,'qok');msg='Raté : c’était '+DEPN[t][0]+' ('+t+'). Tu as cliqué sur '+DEPN[c][0]+'.'}
  var box=document.getElementById('qBox');
+ var tm=document.getElementById('qTimer');if(tm)tm.remove();
  box.querySelector('.qmsg').textContent=msg;
  box.querySelector('p').textContent='Question '+(QZ.i+1)+' sur '+QZ.list.length+' · Score : '+QZ.score;
  var a=box.querySelector('.qact');a.insertBefore(qBtn(QZ.i+1<QZ.list.length?'Question suivante':'Voir le résultat',qNext),a.firstChild);
 }
+function qAnswer(c){qFinish(c)}
 function qNext(){QZ.i++;QZ.locked=false;qClear();qRender()}
-function qQuit(){QZ=null;qClear();var box=document.getElementById('qBox');box.innerHTML='';box.hidden=true}
+function qQuit(){QZ=null;clearInterval(QT);qClear();qHide(false);var box=document.getElementById('qBox');box.innerHTML='';box.hidden=true}
 document.getElementById('qStart').onclick=qStart;
 function svcLabel(c){var s=DSPEC[c];if(s){return s[0]==='bspp'?'BSPP':s[0]==='bmpm'?'BMPM + SDIS':'SDMIS'}return(c==='2A'||c==='2B')?'SIS':'SDIS'}
 function nDeps(n){return n+(n>1?' départements':' département')}
