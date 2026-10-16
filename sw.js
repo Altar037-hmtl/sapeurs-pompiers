@@ -1,5 +1,5 @@
-var V='sp-v2';
-var FILES=['./','index.html','favicon.svg','favicon-192.png','apple-touch-icon.png','manifest.webmanifest'];
+var V='sp-v3';
+var FILES=['./','index.html','favicon.svg','favicon-192.png','apple-touch-icon.png','manifest.webmanifest','fonts/atkinson-hyperlegible-400.woff2','fonts/atkinson-hyperlegible-700.woff2','fonts/bricolage-grotesque-600.woff2','fonts/bricolage-grotesque-800.woff2'];
 self.addEventListener('install',function(e){e.waitUntil(caches.open(V).then(function(c){return c.addAll(FILES)}).then(function(){return self.skipWaiting()}));});
 self.addEventListener('activate',function(e){e.waitUntil(caches.keys().then(function(ks){return Promise.all(ks.filter(function(k){return k!==V}).map(function(k){return caches.delete(k)}))}).then(function(){return self.clients.claim()}));});
 self.addEventListener('fetch',function(e){
